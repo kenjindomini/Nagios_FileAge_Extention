@@ -2,11 +2,14 @@
  * Description: Nagios extention to check the oldest file in a directory.
  * Created: 2013-01-25
  * Author: Keith Olenchak
- * Version 0.5.1.0
+ * Version 0.5.2.0
  * 
  * 2013-01-28 - Keith Olechak:
- * Added new ReturnCode "NOFILES" with the integer value of 10, this is for interal use; it should never be used as an application exit code. When ReturnCode.NOFILES is returned
+ * -Added new ReturnCode "NOFILES" with the integer value of 10, this is for interal use; it should never be used as an application exit code. When ReturnCode.NOFILES is returned
  *      the application should return 'NoFiles' as this will have the user configured ReturnCode.
+ * -Added some exception handling to main()
+ * -Formatting optimization changes made to print_usage()
+ * -Fixed a bug in the parseArguments() loops
  * 
  * Accepted Flags: -t (--target), -v (--verbose), -V (--version), -h (--help), -w (--warning), -c (--critical), -n (--WarnOnNoFiles), -N (--CritOnNoFiles); 
  */
@@ -23,26 +26,36 @@ namespace QuasarQode.NagiosExtentions
     class Program
     {
         public static string wThreshold = null, cThreshold = null;
-        public static enum ReturnCode { OK = 0, WARNING = 1, CRITICAL = 2, UNKNOWN = 3, NOFILES = 10};
+        public enum ReturnCode { OK = 0, WARNING = 1, CRITICAL = 2, UNKNOWN = 3, NOFILES = 10};
         public static ReturnCode NoFiles = ReturnCode.OK;
-        public static enum Flag { TARGET, VERBOSE, VERSION, HELP, WARNING, CRITICAL, WARN_ON_NO_FILES, CRIT_ON_NO_FILES };
+        public enum Flag { TARGET, VERBOSE, VERSION, HELP, WARNING, CRITICAL, WARN_ON_NO_FILES, CRIT_ON_NO_FILES };
         public static int Verbose_level = 0;
         public static DirectoryInfo target;
         public static Nagios_Thresholds Warning = null, Critical = null;
+        public static Exception LastException;
 
         static int Main(string[] args)
         {
             string error = "SUCCESS";
             ReturnCode ExitCode = ReturnCode.OK;
             DateTime AgeOfOldestFile;
-            ExitCode = parseArguments(args, out error);
+            try
+            {
+                ExitCode = parseArguments(args, out error);
+            }
+            catch (IndexOutOfRangeException e)
+            {
+                error = "NO ARGUMENTS PASSED TO APPLICATION.";
+                print_usage(true);
+                LastException = e;
+                return (int)ReturnCode.UNKNOWN;
+            }
             if(ExitCode != ReturnCode.OK)
             {
                 Console.Out.WriteLine(string.Format("ERR -- {0}", error));
                 return (int)ExitCode;
             }
             ExitCode = getOldestFile(target, out error, out AgeOfOldestFile);
-
             return (int)ExitCode;
         }
 
@@ -61,27 +74,30 @@ namespace QuasarQode.NagiosExtentions
         static void print_version()
         {
             string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-            Console.Out.WriteLine(version);
+            Console.Out.WriteLine(string.Format("CheckFileAge.exe, Version: {0}", version));
         }
 
         static void print_usage(bool Short_Usage)
         {
-            const string shortUsage = "Use CheckFileAge.exe -h for help.\r\nCheckFileAge.exe -t <target> [-v <verbosity level>][-w <warning value>][-c <critical value>][-n or -N]";
+            const string shortUsagepreamble = "\r\nUse CheckFileAge.exe -h for help.";
+            const string Usage = "\r\nCheckFileAge.exe -t <target> [-v <verbosity level>][-w <warning value>]\r\n[-c <critical value>][-n or -N]\r\n";
             const string TARGET = "-t or --target: Full directory path to be checked.";
             const string VERBOSE = "-v or --verbose: Set verbosity level of output.";
             const string VERSION = "-V or --version: Outputs the version of this executable.";
             const string HELP = "-h or --help: Displays this usage information.";
             const string WARNING = "-w or --warning: Set the warning threshold in minutes.";
             const string CRITICAL = "-c or --critical: Set the critical threshold in minutes.";
-            const string WARN_ON_NO_FILES = "-n or --WarnOnNoFiles: If no files are in the directory we exit with WARNING, OK by default.";
-            const string CRIT_ON_NO_FILES = "-N or --CritOnNoFiles: If no files are in the directory we exit with CRITICAL, OK by default.";
+            const string WARN_ON_NO_FILES = "-n or --WarnOnNoFiles: If no files are in the directory we exit with WARNING";
+            const string CRIT_ON_NO_FILES = "-N or --CritOnNoFiles: If no files are in the directory we exit with CRITICAL";
+            const string NOTE1 = "\r\nNote: No files in target returns OK by default";
             if (Short_Usage)
             {
-                Console.Out.WriteLine(shortUsage);
+                Console.Out.WriteLine(shortUsagepreamble);
+                Console.Out.WriteLine(Usage);
                 return;
             }
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine(shortUsage);
+            sb.AppendLine(Usage);
             sb.AppendLine(TARGET);
             sb.AppendLine(VERBOSE);
             sb.AppendLine(VERSION);
@@ -90,31 +106,40 @@ namespace QuasarQode.NagiosExtentions
             sb.AppendLine(CRITICAL);
             sb.AppendLine(WARN_ON_NO_FILES);
             sb.AppendLine(CRIT_ON_NO_FILES);
+            sb.AppendLine(NOTE1);
             Console.Out.Write(sb.ToString());
         }
 
         static ReturnCode parseArguments(string[] args, out string error)
         {
-            int index = 0;
+            int index = 0, loopcount;
             error = "SUCCESS";
             Dictionary<string, Flag> _flags;
             Exception exception;
             getFlags(out _flags);
             while (index <= args.Length)
             {
+                loopcount = 0;
                 foreach (var pair in _flags)
                 {
                     if (string.Compare(pair.Key, args[index]) == 0)
                     {
                         executeFlag(pair.Value, args, index, out index, out error, out exception);
+                        if (pair.Value == Flag.VERSION || pair.Value == Flag.HELP)
+                        {
+                            return ReturnCode.UNKNOWN;
+                        }
+                        break;
                     }
-                    else
+                    loopcount++;
+                    if (loopcount > _flags.Count)
                     {
                         print_usage(true);
                         error = string.Format("Invalid flag: {0}.", args[index]);
                         return ReturnCode.UNKNOWN;
                     }
                 }
+                index++;
             }
             return ReturnCode.OK;
         }
