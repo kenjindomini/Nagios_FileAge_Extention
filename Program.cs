@@ -2,9 +2,14 @@
  * Description: Nagios extention to check the oldest file in a directory.
  * Created: 2013-01-25
  * Author: Keith Olenchak
- * Version 0.5.2.0
+ * Version 0.9.0.0
  * 
- * 2013-01-28 - Keith Olechak:
+ * 2013-01-29 - Keith Olenchak:
+ * -Added calculations for getting the delta, in minutes, between now and the age of the oldest file.
+ * -Added getStatus function, converts ReturnCode enum value in to a string.
+ * -Added buidOutput function to handle the final output to STDOUT, it builds the string based on the verbosity level.
+ * 
+ * 2013-01-28 - Keith Olenchak:
  * -Added new ReturnCode "NOFILES" with the integer value of 10, this is for interal use; it should never be used as an application exit code. When ReturnCode.NOFILES is returned
  *      the application should return 'NoFiles' as this will have the user configured ReturnCode.
  * -Added some exception handling to main()
@@ -23,16 +28,17 @@ using System.IO;
 
 namespace QuasarQode.NagiosExtentions
 {
-    class Program
+    public enum ReturnCode { OK = 0, WARNING = 1, CRITICAL = 2, UNKNOWN = 3, NOFILES = 10 };
+
+    class NagiosExtentions
     {
         public static string wThreshold = null, cThreshold = null;
-        public enum ReturnCode { OK = 0, WARNING = 1, CRITICAL = 2, UNKNOWN = 3, NOFILES = 10};
         public static ReturnCode NoFiles = ReturnCode.OK;
         public enum Flag { TARGET, VERBOSE, VERSION, HELP, WARNING, CRITICAL, WARN_ON_NO_FILES, CRIT_ON_NO_FILES };
         public static int Verbose_level = 0;
         public static DirectoryInfo target;
-        public static Nagios_Thresholds Warning = null, Critical = null;
         public static Exception LastException;
+        public static Nagios_Thresholds fileageCheck;
 
         static int Main(string[] args)
         {
@@ -55,16 +61,48 @@ namespace QuasarQode.NagiosExtentions
                 Console.Out.WriteLine(string.Format("ERR -- {0}", error));
                 return (int)ExitCode;
             }
-            ExitCode = getOldestFile(target, out error, out AgeOfOldestFile);
+            bool hasNoFiles;
+            ExitCode = getOldestFile(target, out error, out AgeOfOldestFile, out hasNoFiles);
+            if (hasNoFiles)
+            {
+                Console.Out.WriteLine(buidOutput(ExitCode,"No files in directory.", null, null, null));
+            }
+            else
+            {
+                int timeDelta;
+                ExitCode = getTimeDelta(AgeOfOldestFile, out timeDelta, out error);
+                if (ExitCode == ReturnCode.UNKNOWN)
+                {
+                    string[] debugOutput = { string.Format("Exception caught: {0}", LastException.Message), string.Format("Exception Details: {0}", LastException.ToString())};
+                    Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
+                    return (int)ExitCode;
+                }
+                fileageCheck = new Nagios_Thresholds(wThreshold, cThreshold);
+                ExitCode = fileageCheck.checkThreshold(timeDelta);
+                Console.Out.WriteLine(buidOutput(ExitCode, string.Format("Oldest file is {0} minutes old.",timeDelta.ToString()), null, null, null));
+            }
             return (int)ExitCode;
         }
 
-        static ReturnCode compareToThresholds(DateTime fileCreationDate, out string error)
+        static ReturnCode getTimeDelta(DateTime OldestFile, out int __TimeDelta, out string error)
         {
+            __TimeDelta = 0;
             error = "SUCCESS";
-            ReturnCode ExitCode = ReturnCode.OK;
-            return ExitCode;
+            long l_timeDelta = DateTime.Now.Ticks - OldestFile.Ticks;
+            TimeSpan ts_timeDelta = new TimeSpan(l_timeDelta);
+            try
+            {
+                int timeDelta = Convert.ToInt32(ts_timeDelta.TotalMinutes);
+            }
+            catch (OverflowException e)
+            {
+                error = "The delta minutes between now and the age of the oldest file is larger than a 32bit integer.";
+                LastException = e;
+                return ReturnCode.UNKNOWN;
+            }
+            return ReturnCode.OK;
         }
+
         static void print_help()
         {
             print_version();
@@ -144,13 +182,15 @@ namespace QuasarQode.NagiosExtentions
             return ReturnCode.OK;
         }
 
-        static ReturnCode getOldestFile(DirectoryInfo dir, out string error, out DateTime AgeOfOldestFile)
+        static ReturnCode getOldestFile(DirectoryInfo dir, out string error, out DateTime AgeOfOldestFile, out bool noFiles)
         {
             error = "SUCCESS";
+            noFiles = false;
             if (dir.GetFiles().GetLength(0) <= 0)
             {
                 error = "NO FILES IN TARGET DIRECTORY.";
                 AgeOfOldestFile = DateTime.Now;
+                noFiles = true;
                 return ReturnCode.NOFILES;
             }
             var files = from f in dir.EnumerateFiles()
@@ -267,6 +307,54 @@ namespace QuasarQode.NagiosExtentions
                     }
             }
             new_index = index;
+        }
+
+        static void getStatus(ReturnCode rc, out string status)
+        {
+            status = "UNKNOWN";
+            switch (rc)
+            {
+                case ReturnCode.OK:
+                    {
+                        status = "OK";
+                        break;
+                    }
+                case ReturnCode.WARNING:
+                    {
+                        status = "WARNING";
+                        break;
+                    }
+                case ReturnCode.CRITICAL:
+                    {
+                        status = "CRITICAL";
+                        break;
+                    }
+                case ReturnCode.UNKNOWN:
+                    {
+                        status = "UNKNOWN";
+                        break;
+                    }
+            }
+        }
+
+        static string buidOutput(ReturnCode FinalReturnCode, string statusText, string perfData1, string[] MultiLineOutput, string[] MultiLinePerfData)
+        {
+            StringBuilder output = new StringBuilder();
+            string status;
+            getStatus(FinalReturnCode, out status);
+            output.AppendFormat("{0}: {1}", status, statusText);
+            if (perfData1 != null)
+            {
+                output.AppendFormat("| {0}", perfData1);
+            }
+            if (Verbose_level >= 2 && MultiLineOutput != null)
+            {
+                foreach (string line in MultiLineOutput)
+                {
+                    output.AppendFormat("\r\n{0}",line);
+                }
+            }
+            return "";
         }
     }
 }
