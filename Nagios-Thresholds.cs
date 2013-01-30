@@ -2,10 +2,10 @@
  * Description: Class for parsing a dealing with the nagios standard for thresholds.
  * Created: 2013-01-28
  * Author: Keith Olenchak
- * Version 1.0.0.0
+ * Version 1.0.0.2
  * 
- * TODO:
- * -Write checkThreshold() function.
+ * 2013-01-30 -- Keith Olenchak:
+ * -Minor bug fixes, wrong varible names, else if where should have been just if.
  * 
  * 2013-01-29 -- Keith Olenchak:
  * -Converted class to hold threshold values for warning and crit, rather than relying on the program to keep track.
@@ -209,7 +209,7 @@ namespace QuasarQode.NagiosExtentions
                     return ReturnCode.CRITICAL;
                 }
             }
-            else if (this.WarningThresholdPresent)
+            if (this.WarningThresholdPresent)
             {
                 if (this.WarnIsRange)
                 {
@@ -226,7 +226,7 @@ namespace QuasarQode.NagiosExtentions
                         return ReturnCode.WARNING;
                     }
                 }
-                else if (!this.WarnIsRange && currentValue > this.C_Min)
+                else if (!this.WarnIsRange && currentValue > this.W_Min)
                 {
                     return ReturnCode.WARNING;
                 }

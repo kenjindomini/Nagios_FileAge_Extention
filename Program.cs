@@ -2,7 +2,15 @@
  * Description: Nagios extention to check the oldest file in a directory.
  * Created: 2013-01-25
  * Author: Keith Olenchak
- * Version 0.9.0.0
+ * Version 1.0.1.0
+ * 
+ * 2013-01-30 - Keith Olenchak:
+ * -Added a check for the existance of the target directory to getOldestFile()
+ * -Added code to handle a non-OK response from getOldestFile()
+ * -Corrected an issue where we returned the wrong status when the directory was empty.
+ * -Added some debug logging to parseArguments.
+ * -Changed debugOutput from a string[] to List<string>
+ * -Removed extra index++ entries in excuteFlag()
  * 
  * 2013-01-29 - Keith Olenchak:
  * -Added calculations for getting the delta, in minutes, between now and the age of the oldest file.
@@ -30,7 +38,7 @@ namespace QuasarQode.NagiosExtentions
 {
     public enum ReturnCode { OK = 0, WARNING = 1, CRITICAL = 2, UNKNOWN = 3, NOFILES = 10 };
 
-    class NagiosExtentions
+    class FileAgeCheck
     {
         public static string wThreshold = null, cThreshold = null;
         public static ReturnCode NoFiles = ReturnCode.OK;
@@ -39,6 +47,7 @@ namespace QuasarQode.NagiosExtentions
         public static DirectoryInfo target;
         public static Exception LastException;
         public static Nagios_Thresholds fileageCheck;
+        public static List<string> debugOutput = new List<string>();
 
         static int Main(string[] args)
         {
@@ -48,24 +57,30 @@ namespace QuasarQode.NagiosExtentions
             try
             {
                 ExitCode = parseArguments(args, out error);
+                if (ExitCode != ReturnCode.OK)
+                {
+                    Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
+                    return (int)ExitCode;
+                }
             }
             catch (IndexOutOfRangeException e)
             {
                 error = "NO ARGUMENTS PASSED TO APPLICATION.";
+                Console.Out.WriteLine(buidOutput(ReturnCode.UNKNOWN, error, null, debugOutput, null));
                 print_usage(true);
                 LastException = e;
                 return (int)ReturnCode.UNKNOWN;
             }
-            if(ExitCode != ReturnCode.OK)
+            ExitCode = getOldestFile(target, out error, out AgeOfOldestFile);
+            if (ExitCode == ReturnCode.NOFILES)
             {
-                Console.Out.WriteLine(string.Format("ERR -- {0}", error));
-                return (int)ExitCode;
+                ExitCode = NoFiles;
+                Console.Out.WriteLine(buidOutput(ExitCode,"No files in directory.", null, debugOutput, null));
             }
-            bool hasNoFiles;
-            ExitCode = getOldestFile(target, out error, out AgeOfOldestFile, out hasNoFiles);
-            if (hasNoFiles)
+            else if (ExitCode != ReturnCode.OK)
             {
-                Console.Out.WriteLine(buidOutput(ExitCode,"No files in directory.", null, null, null));
+                Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
+                return (int)ExitCode;
             }
             else
             {
@@ -73,13 +88,14 @@ namespace QuasarQode.NagiosExtentions
                 ExitCode = getTimeDelta(AgeOfOldestFile, out timeDelta, out error);
                 if (ExitCode == ReturnCode.UNKNOWN)
                 {
-                    string[] debugOutput = { string.Format("Exception caught: {0}", LastException.Message), string.Format("Exception Details: {0}", LastException.ToString())};
+                    debugOutput.Add(string.Format("Exception caught: {0}", LastException.Message));
+                    debugOutput.Add(string.Format("Exception Details: {0}", LastException.ToString()));
                     Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
                     return (int)ExitCode;
                 }
                 fileageCheck = new Nagios_Thresholds(wThreshold, cThreshold);
                 ExitCode = fileageCheck.checkThreshold(timeDelta);
-                Console.Out.WriteLine(buidOutput(ExitCode, string.Format("Oldest file is {0} minutes old.",timeDelta.ToString()), null, null, null));
+                Console.Out.WriteLine(buidOutput(ExitCode, string.Format("Oldest file is {0} minutes old.", timeDelta.ToString()), null, debugOutput, null));
             }
             return (int)ExitCode;
         }
@@ -93,6 +109,7 @@ namespace QuasarQode.NagiosExtentions
             try
             {
                 int timeDelta = Convert.ToInt32(ts_timeDelta.TotalMinutes);
+                __TimeDelta = timeDelta;
             }
             catch (OverflowException e)
             {
@@ -155,14 +172,14 @@ namespace QuasarQode.NagiosExtentions
             Dictionary<string, Flag> _flags;
             Exception exception;
             getFlags(out _flags);
-            while (index <= args.Length)
+            while (index < args.Length)
             {
                 loopcount = 0;
                 foreach (var pair in _flags)
                 {
                     if (string.Compare(pair.Key, args[index]) == 0)
                     {
-                        executeFlag(pair.Value, args, index, out index, out error, out exception);
+                        executeFlag(pair.Value, args, index, out error, out exception);
                         if (pair.Value == Flag.VERSION || pair.Value == Flag.HELP)
                         {
                             return ReturnCode.UNKNOWN;
@@ -182,15 +199,20 @@ namespace QuasarQode.NagiosExtentions
             return ReturnCode.OK;
         }
 
-        static ReturnCode getOldestFile(DirectoryInfo dir, out string error, out DateTime AgeOfOldestFile, out bool noFiles)
+        static ReturnCode getOldestFile(DirectoryInfo dir, out string error, out DateTime AgeOfOldestFile)
         {
             error = "SUCCESS";
-            noFiles = false;
+            AgeOfOldestFile = DateTime.Now;
+
+            if (dir.Exists == false)
+            {
+                error = "DIRECTORY DOES NOT EXIST";
+                return ReturnCode.UNKNOWN;
+            }
             if (dir.GetFiles().GetLength(0) <= 0)
             {
                 error = "NO FILES IN TARGET DIRECTORY.";
                 AgeOfOldestFile = DateTime.Now;
-                noFiles = true;
                 return ReturnCode.NOFILES;
             }
             var files = from f in dir.EnumerateFiles()
@@ -222,7 +244,7 @@ namespace QuasarQode.NagiosExtentions
             Flags.Add("--CritOnNoFiles", Flag.CRIT_ON_NO_FILES);
         }
 
-        static void executeFlag(Flag flag, string[] args, int index, out int new_index, out string error, out Exception exception)
+        static void executeFlag(Flag flag, string[] args, int index, out string error, out Exception exception)
         {
             index++;
             error = "SUCCESS";
@@ -235,7 +257,7 @@ namespace QuasarQode.NagiosExtentions
                         try
                         {
                             target = new DirectoryInfo(args[index]);
-                            index++;
+                            debugOutput.Add(string.Format("Target set to {0}.", target.ToString()));
                         }
                         catch (ArgumentException e)
                         {
@@ -254,7 +276,7 @@ namespace QuasarQode.NagiosExtentions
                         try
                         {
                             Verbose_level = Convert.ToInt32(args[index]);
-                            index++;
+                            debugOutput.Add(string.Format("Verbose Level set to {0}.", args[index]));
                         }
                         catch (FormatException e)
                         {
@@ -281,23 +303,25 @@ namespace QuasarQode.NagiosExtentions
                 case Flag.WARN_ON_NO_FILES:
                     {
                         NoFiles = ReturnCode.WARNING;
+                        debugOutput.Add("Will return WARNING if directory is empty.");
                         break;
                     }
                 case Flag.CRIT_ON_NO_FILES:
                     {
                         NoFiles = ReturnCode.CRITICAL;
+                        debugOutput.Add("Will return CRITICAL if directory is empty.");
                         break;
                     }
                 case Flag.WARNING:
                     {
                         wThreshold = args[index];
-                        index++;
+                        debugOutput.Add(string.Format("Warning Threshold set to {0} minutes old.", args[index]));
                         break;
                     }
                 case Flag.CRITICAL:
                     {
                         cThreshold = args[index];
-                        index++;
+                        debugOutput.Add(string.Format("Critical Threshold set to {0} minutes old.", args[index]));
                         break;
                     }
                 default:
@@ -306,7 +330,6 @@ namespace QuasarQode.NagiosExtentions
                         break;
                     }
             }
-            new_index = index;
         }
 
         static void getStatus(ReturnCode rc, out string status)
@@ -334,10 +357,11 @@ namespace QuasarQode.NagiosExtentions
                         status = "UNKNOWN";
                         break;
                     }
+
             }
         }
 
-        static string buidOutput(ReturnCode FinalReturnCode, string statusText, string perfData1, string[] MultiLineOutput, string[] MultiLinePerfData)
+        static string buidOutput(ReturnCode FinalReturnCode, string statusText, string perfData1, List<string> MultiLineOutput, List<string> MultiLinePerfData)
         {
             StringBuilder output = new StringBuilder();
             string status;
@@ -354,7 +378,7 @@ namespace QuasarQode.NagiosExtentions
                     output.AppendFormat("\r\n{0}",line);
                 }
             }
-            return "";
+            return output.ToString();
         }
     }
 }
