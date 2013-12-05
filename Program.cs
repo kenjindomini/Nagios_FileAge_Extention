@@ -6,6 +6,7 @@
  * 
  * 2013-12-05 - Keith Olenchak:
  * -Added Try/Catch to the call to Nagios_Thresholds as it can throw an exception that was never being caught.
+ * -Added Oldest_File performance data.
  * 
  * 2013-01-30 - Keith Olenchak:
  * -Added a check for the existance of the target directory to getOldestFile()
@@ -100,7 +101,7 @@ namespace QuasarQode.NagiosExtentions
                 {
                     fileageCheck = new Nagios_Thresholds(wThreshold, cThreshold);
                     ExitCode = fileageCheck.checkThreshold(timeDelta);
-                    Console.Out.WriteLine(buidOutput(ExitCode, string.Format("Oldest file is {0} minutes old.", timeDelta.ToString()), null, debugOutput, null));
+                    Console.Out.WriteLine(buidOutput(ExitCode, string.Format("Oldest file is {0} minutes old.", timeDelta.ToString()), string.Format("Oldest_file={0}", timeDelta.ToString()), debugOutput, null));
                 }
                 catch (Exception e)
                 {
