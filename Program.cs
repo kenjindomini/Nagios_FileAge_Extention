@@ -36,7 +36,7 @@ using System.IO;
 
 namespace QuasarQode.NagiosExtentions
 {
-    public enum ReturnCode { OK = 0, WARNING = 1, CRITICAL = 2, UNKNOWN = 3, NOFILES = 10 };
+    public enum ReturnCode : int { OK = 0, WARNING = 1, CRITICAL = 2, UNKNOWN = 3, NOFILES = 10 };
 
     class FileAgeCheck
     {
