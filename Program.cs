@@ -58,6 +58,7 @@ namespace QuasarQode.NagiosExtentions
 
         static int Main(string[] args)
         {
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "\nApplication Initiated.");
             string error = "SUCCESS";
             ReturnCode ExitCode = ReturnCode.OK;
             DateTime AgeOfOldestFile;
@@ -67,6 +68,7 @@ namespace QuasarQode.NagiosExtentions
                 if (ExitCode != ReturnCode.OK)
                 {
                     Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, error);
                     return (int)ExitCode;
                 }
             }
