@@ -26,7 +26,7 @@ using System.Collections.Generic;
 namespace QuasarQode.Logs
 {
 
-class Logging
+public class Logging
 	{
 		private static int LOG_LEVEL = 0;
 		private static long Log_Size_Limit = 102400;
