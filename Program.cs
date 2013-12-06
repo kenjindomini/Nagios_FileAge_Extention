@@ -4,6 +4,9 @@
  * Author: Keith Olenchak
  * Version 1.0.1.0
  * 
+ * 2013-12-06 - Keith Olenchak:
+ * -Added Logging for exceptions.
+ * 
  * 2013-12-05 - Keith Olenchak:
  * -Added Try/Catch to the call to Nagios_Thresholds as it can throw an exception that was never being caught.
  * -Added Oldest_File performance data.
@@ -70,9 +73,13 @@ namespace QuasarQode.NagiosExtentions
             catch (IndexOutOfRangeException e)
             {
                 error = "NO ARGUMENTS PASSED TO APPLICATION.";
+                debugOutput.Add(string.Format("Exception caught: {0}", error));
+                debugOutput.Add(string.Format("Exception Details: {0}", e.ToString()));
                 Console.Out.WriteLine(buidOutput(ReturnCode.UNKNOWN, error, null, debugOutput, null));
                 print_usage(true);
                 LastException = e;
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                 return (int)ReturnCode.UNKNOWN;
             }
             ExitCode = getOldestFile(target, out error, out AgeOfOldestFile);
@@ -94,6 +101,8 @@ namespace QuasarQode.NagiosExtentions
                 {
                     debugOutput.Add(string.Format("Exception caught: {0}", LastException.Message));
                     debugOutput.Add(string.Format("Exception Details: {0}", LastException.ToString()));
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.Message);
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.ToString());
                     Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
                     return (int)ExitCode;
                 }
@@ -109,6 +118,8 @@ namespace QuasarQode.NagiosExtentions
                     LastException = e;
                     debugOutput.Add(LastException.ToString());
                     Console.Out.WriteLine(buidOutput(ReturnCode.UNKNOWN, error, null, debugOutput, null));
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.Message);
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.ToString());
                     return (int)ReturnCode.UNKNOWN;
                 }
             }
@@ -130,6 +141,8 @@ namespace QuasarQode.NagiosExtentions
             {
                 error = "The delta minutes between now and the age of the oldest file is larger than a 32bit integer.";
                 LastException = e;
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                 return ReturnCode.UNKNOWN;
             }
             return ReturnCode.OK;
@@ -278,11 +291,15 @@ namespace QuasarQode.NagiosExtentions
                         {
                             error = "Invalid arguemnt for --target.";
                             exception = e;
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                         }
                         catch (PathTooLongException e)
                         {
                             error = "The path argument for --target is too long.";
                             exception = e;
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                         }
                         break;
                     }
@@ -297,11 +314,15 @@ namespace QuasarQode.NagiosExtentions
                         {
                             error = "Argument for Verbose flag not a sequence of digits";
                             exception = e;
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                         }
                         catch (OverflowException e)
                         {
                             error = "Argument for verbose flag is too large of a number";
                             exception = e;
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                         }
                         break;
                     }
