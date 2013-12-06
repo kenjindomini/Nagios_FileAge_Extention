@@ -80,6 +80,7 @@ namespace QuasarQode.NagiosExtentions
                 LastException = e;
                 Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
                 Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ReturnCode.UNKNOWN).ToString());
                 return (int)ReturnCode.UNKNOWN;
             }
             ExitCode = getOldestFile(target, out error, out AgeOfOldestFile);
@@ -91,6 +92,7 @@ namespace QuasarQode.NagiosExtentions
             else if (ExitCode != ReturnCode.OK)
             {
                 Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ExitCode).ToString());
                 return (int)ExitCode;
             }
             else
@@ -104,6 +106,7 @@ namespace QuasarQode.NagiosExtentions
                     Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.Message);
                     Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.ToString());
                     Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ExitCode).ToString());
                     return (int)ExitCode;
                 }
                 try
@@ -120,9 +123,11 @@ namespace QuasarQode.NagiosExtentions
                     Console.Out.WriteLine(buidOutput(ReturnCode.UNKNOWN, error, null, debugOutput, null));
                     Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.Message);
                     Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.ToString());
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ReturnCode.UNKNOWN).ToString());
                     return (int)ReturnCode.UNKNOWN;
                 }
             }
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "End of Main() hit, exiting with status: " + ((int)ExitCode).ToString());
             return (int)ExitCode;
         }
 
@@ -219,6 +224,7 @@ namespace QuasarQode.NagiosExtentions
                     {
                         print_usage(true);
                         error = string.Format("Invalid flag: {0}.", args[index]);
+                        Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, error);
                         return ReturnCode.UNKNOWN;
                     }
                 }
@@ -235,11 +241,13 @@ namespace QuasarQode.NagiosExtentions
             if (dir.Exists == false)
             {
                 error = "DIRECTORY DOES NOT EXIST";
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, error);
                 return ReturnCode.UNKNOWN;
             }
             if (dir.GetFiles().GetLength(0) <= 0)
             {
                 error = "NO FILES IN TARGET DIRECTORY.";
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.WARNING, error);
                 AgeOfOldestFile = DateTime.Now;
                 return ReturnCode.NOFILES;
             }
@@ -414,6 +422,7 @@ namespace QuasarQode.NagiosExtentions
                     output.AppendFormat("\r\n{0}",line);
                 }
             }
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Returning: " + output.ToString());
             return output.ToString();
         }
     }
