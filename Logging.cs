@@ -32,7 +32,7 @@ class Logging
 		private static long Log_Size_Limit = 102400;
 		private static readonly object _qqsync = new object();
 		private static readonly object _custom = new object();
-        public static enum iLogLevel : int { DEBUG = 0, INFO = 2, WARNING = 4, ERROR = 6, EXCEPTION = 8, FATALEXCEPTION = 10 };
+        public enum iLogLevel : int { DEBUG = 0, INFO = 2, WARNING = 4, ERROR = 6, EXCEPTION = 8, FATALEXCEPTION = 10 };
         public static List<string> szLogLevel = new List<string>{"Debug", "1", "Info", "3", "Warning", "5", "Error", "7", "Exception", "9", "FatalException"};
 
 		public static int quasar (int iLog_Level, string strLog_Message)
