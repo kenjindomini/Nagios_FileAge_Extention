@@ -73,7 +73,7 @@ namespace QuasarQode.NagiosExtentions
                 this.LastExceptionThrown = e;
                 throw;
             }
-            Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, "Hit the end of Nagios_Thresholds()...This should never happen.");
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.DEBUG, "Hit the end of Nagios_Thresholds().");
         }
 
         /// <summary>
