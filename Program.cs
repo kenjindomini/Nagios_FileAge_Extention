@@ -58,7 +58,7 @@ namespace QuasarQode.NagiosExtentions
 
         static int Main(string[] args)
         {
-            Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "\nApplication Initiated.");
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Application Initiated.", "\r\n");
             string error = "SUCCESS";
             ReturnCode ExitCode = ReturnCode.OK;
             DateTime AgeOfOldestFile;
@@ -79,6 +79,18 @@ namespace QuasarQode.NagiosExtentions
                 debugOutput.Add(string.Format("Exception Details: {0}", e.ToString()));
                 Console.Out.WriteLine(buidOutput(ReturnCode.UNKNOWN, error, null, debugOutput, null));
                 print_usage(true);
+                LastException = e;
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ReturnCode.UNKNOWN).ToString());
+                return (int)ReturnCode.UNKNOWN;
+            }
+            catch (Exception e)
+            {
+                error = "Unexpected exception caught.";
+                debugOutput.Add(string.Format("Exception caught: {0}", error));
+                debugOutput.Add(string.Format("Exception Details: {0}", e.ToString()));
+                Console.Out.WriteLine(buidOutput(ReturnCode.UNKNOWN, error, null, debugOutput, null));
                 LastException = e;
                 Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
                 Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
