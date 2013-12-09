@@ -265,10 +265,22 @@ namespace QuasarQode.NagiosExtentions
                 AgeOfOldestFile = DateTime.Now;
                 return ReturnCode.NOFILES;
             }
-            var files = from f in dir.EnumerateFiles()
-                        orderby f.CreationTime
-                        select f;
-            AgeOfOldestFile = files.ElementAt(0).CreationTime;
+            try
+            {
+                var files = from f in dir.EnumerateFiles()
+                            orderby f.CreationTime
+                            select f;
+                AgeOfOldestFile = files.ElementAt(0).CreationTime;
+            }
+            catch (Exception e)
+            {
+                error = "Unexpected Exception caught in ReturnCode getOldestFile(DirectoryInfo dir, out string error, out DateTime AgeOfOldestFile).";
+                LastException = e;
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, error);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.Message);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.ToString());
+                return ReturnCode.UNKNOWN;
+            }
             return ReturnCode.OK;
         }
 
