@@ -270,7 +270,17 @@ namespace QuasarQode.NagiosExtentions
                 var files = from f in dir.EnumerateFiles()
                             orderby f.CreationTime
                             select f;
-                AgeOfOldestFile = files.ElementAt(0).CreationTime;
+                if (files == null)
+                {
+                    error = "NO FILES IN TARGET DIRECTORY.";
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.WARNING, error);
+                    AgeOfOldestFile = DateTime.Now;
+                    return ReturnCode.NOFILES;
+                }
+                else
+                {
+                    AgeOfOldestFile = files.ElementAt(0).CreationTime;
+                }
             }
             catch (Exception e)
             {
