@@ -4,6 +4,9 @@
  * Author: Keith Olenchak
  * Version 1.0.1.0
  * 
+ * 2013-12-09 - Keith Olenchak:
+ * -Resolved bug caused by race condition in getOldestFile() by checking if LINQ query variable = null and return NOFILES.
+ * 
  * 2013-12-06 - Keith Olenchak:
  * -Added Logging for exceptions.
  * 
