@@ -41,6 +41,7 @@ namespace QuasarQode.NagiosExtentions
         /// <param name="CriticalThreshold">Critical Threshold string, pass null if none was received.</param>
         public Nagios_Thresholds(string WarningThreshold, string CriticalThreshold)
         {
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Nagios_Thresholds() Initiated.");
             try
             {
                 if (WarningThreshold == null && CriticalThreshold == null)
@@ -72,6 +73,7 @@ namespace QuasarQode.NagiosExtentions
                 this.LastExceptionThrown = e;
                 throw;
             }
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.DEBUG, "Hit the end of Nagios_Thresholds().");
         }
 
         /// <summary>

@@ -4,6 +4,13 @@
  * Author: Keith Olenchak
  * Version 1.0.1.0
  * 
+ * 2013-12-06 - Keith Olenchak:
+ * -Added Logging for exceptions.
+ * 
+ * 2013-12-05 - Keith Olenchak:
+ * -Added Try/Catch to the call to Nagios_Thresholds as it can throw an exception that was never being caught.
+ * -Added Oldest_File performance data.
+ * 
  * 2013-01-30 - Keith Olenchak:
  * -Added a check for the existance of the target directory to getOldestFile()
  * -Added code to handle a non-OK response from getOldestFile()
@@ -51,6 +58,7 @@ namespace QuasarQode.NagiosExtentions
 
         static int Main(string[] args)
         {
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Application Initiated.", "\r\n");
             string error = "SUCCESS";
             ReturnCode ExitCode = ReturnCode.OK;
             DateTime AgeOfOldestFile;
@@ -60,15 +68,33 @@ namespace QuasarQode.NagiosExtentions
                 if (ExitCode != ReturnCode.OK)
                 {
                     Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, error);
                     return (int)ExitCode;
                 }
             }
             catch (IndexOutOfRangeException e)
             {
                 error = "NO ARGUMENTS PASSED TO APPLICATION.";
+                debugOutput.Add(string.Format("Exception caught: {0}", error));
+                debugOutput.Add(string.Format("Exception Details: {0}", e.ToString()));
                 Console.Out.WriteLine(buidOutput(ReturnCode.UNKNOWN, error, null, debugOutput, null));
                 print_usage(true);
                 LastException = e;
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ReturnCode.UNKNOWN).ToString());
+                return (int)ReturnCode.UNKNOWN;
+            }
+            catch (Exception e)
+            {
+                error = "Unexpected exception caught.";
+                debugOutput.Add(string.Format("Exception caught: {0}", error));
+                debugOutput.Add(string.Format("Exception Details: {0}", e.ToString()));
+                Console.Out.WriteLine(buidOutput(ReturnCode.UNKNOWN, error, null, debugOutput, null));
+                LastException = e;
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ReturnCode.UNKNOWN).ToString());
                 return (int)ReturnCode.UNKNOWN;
             }
             ExitCode = getOldestFile(target, out error, out AgeOfOldestFile);
@@ -80,6 +106,7 @@ namespace QuasarQode.NagiosExtentions
             else if (ExitCode != ReturnCode.OK)
             {
                 Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ExitCode).ToString());
                 return (int)ExitCode;
             }
             else
@@ -90,13 +117,31 @@ namespace QuasarQode.NagiosExtentions
                 {
                     debugOutput.Add(string.Format("Exception caught: {0}", LastException.Message));
                     debugOutput.Add(string.Format("Exception Details: {0}", LastException.ToString()));
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.Message);
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.ToString());
                     Console.Out.WriteLine(buidOutput(ExitCode, error, null, debugOutput, null));
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ExitCode).ToString());
                     return (int)ExitCode;
                 }
-                fileageCheck = new Nagios_Thresholds(wThreshold, cThreshold);
-                ExitCode = fileageCheck.checkThreshold(timeDelta);
-                Console.Out.WriteLine(buidOutput(ExitCode, string.Format("Oldest file is {0} minutes old.", timeDelta.ToString()), null, debugOutput, null));
+                try
+                {
+                    fileageCheck = new Nagios_Thresholds(wThreshold, cThreshold);
+                    ExitCode = fileageCheck.checkThreshold(timeDelta);
+                    Console.Out.WriteLine(buidOutput(ExitCode, string.Format("Oldest file is {0} minutes old.", timeDelta.ToString()), string.Format("Oldest_file={0}", timeDelta.ToString()), debugOutput, null));
+                }
+                catch (Exception e)
+                {
+                    error = e.Message;
+                    LastException = e;
+                    debugOutput.Add(LastException.ToString());
+                    Console.Out.WriteLine(buidOutput(ReturnCode.UNKNOWN, error, null, debugOutput, null));
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.Message);
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.ToString());
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Main() exiting with status: " + ((int)ReturnCode.UNKNOWN).ToString());
+                    return (int)ReturnCode.UNKNOWN;
+                }
             }
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "End of Main() hit, exiting with status: " + ((int)ExitCode).ToString());
             return (int)ExitCode;
         }
 
@@ -115,6 +160,8 @@ namespace QuasarQode.NagiosExtentions
             {
                 error = "The delta minutes between now and the age of the oldest file is larger than a 32bit integer.";
                 LastException = e;
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                 return ReturnCode.UNKNOWN;
             }
             return ReturnCode.OK;
@@ -191,6 +238,7 @@ namespace QuasarQode.NagiosExtentions
                     {
                         print_usage(true);
                         error = string.Format("Invalid flag: {0}.", args[index]);
+                        Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, error);
                         return ReturnCode.UNKNOWN;
                     }
                 }
@@ -207,18 +255,42 @@ namespace QuasarQode.NagiosExtentions
             if (dir.Exists == false)
             {
                 error = "DIRECTORY DOES NOT EXIST";
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, error);
                 return ReturnCode.UNKNOWN;
             }
             if (dir.GetFiles().GetLength(0) <= 0)
             {
                 error = "NO FILES IN TARGET DIRECTORY.";
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.WARNING, error);
                 AgeOfOldestFile = DateTime.Now;
                 return ReturnCode.NOFILES;
             }
-            var files = from f in dir.EnumerateFiles()
-                        orderby f.CreationTime
-                        select f;
-            AgeOfOldestFile = files.ElementAt(0).CreationTime;
+            try
+            {
+                var files = from f in dir.EnumerateFiles()
+                            orderby f.CreationTime
+                            select f;
+                if (files == null)
+                {
+                    error = "NO FILES IN TARGET DIRECTORY.";
+                    Globals.Globals.LogIt(Logs.Logging.iLogLevel.WARNING, error);
+                    AgeOfOldestFile = DateTime.Now;
+                    return ReturnCode.NOFILES;
+                }
+                else
+                {
+                    AgeOfOldestFile = files.ElementAt(0).CreationTime;
+                }
+            }
+            catch (Exception e)
+            {
+                error = "Unexpected Exception caught in ReturnCode getOldestFile(DirectoryInfo dir, out string error, out DateTime AgeOfOldestFile).";
+                LastException = e;
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, error);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.Message);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.ToString());
+                return ReturnCode.UNKNOWN;
+            }
             return ReturnCode.OK;
         }
 
@@ -263,11 +335,15 @@ namespace QuasarQode.NagiosExtentions
                         {
                             error = "Invalid arguemnt for --target.";
                             exception = e;
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                         }
                         catch (PathTooLongException e)
                         {
                             error = "The path argument for --target is too long.";
                             exception = e;
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                         }
                         break;
                     }
@@ -282,11 +358,15 @@ namespace QuasarQode.NagiosExtentions
                         {
                             error = "Argument for Verbose flag not a sequence of digits";
                             exception = e;
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                         }
                         catch (OverflowException e)
                         {
                             error = "Argument for verbose flag is too large of a number";
                             exception = e;
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, error);
+                            Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, e.ToString());
                         }
                         break;
                     }
@@ -378,6 +458,7 @@ namespace QuasarQode.NagiosExtentions
                     output.AppendFormat("\r\n{0}",line);
                 }
             }
+            Globals.Globals.LogIt(Logs.Logging.iLogLevel.INFO, "Returning: " + output.ToString());
             return output.ToString();
         }
     }
