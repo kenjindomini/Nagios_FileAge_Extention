@@ -273,8 +273,7 @@ namespace QuasarQode.NagiosExtentions
                 var files = from f in dir.EnumerateFiles()
                             orderby f.CreationTime
                             select f;
-                Globals.Globals.LogIt(Logs.Logging.iLogLevel.DEBUG, string.Format("var files = {0}.", files.ToString()));
-                if (files == null)
+                if (files.Any())
                 {
                     error = "NO FILES IN TARGET DIRECTORY.";
                     Globals.Globals.LogIt(Logs.Logging.iLogLevel.WARNING, error);
