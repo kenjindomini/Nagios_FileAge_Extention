@@ -92,7 +92,7 @@ namespace QuasarQode.Globals
             return 0;
         }*/
 
-        public static int LogIt(Logging.iLogLevel _LogLevel, string _message)
+        public static int LogIt(Logging.iLogLevel _LogLevel, string _message, string _prefix = null)
         {
             Logging.iLogLevel logLevel_Message = _LogLevel;
             string _log = "CheckFileAge_Misc";
@@ -100,7 +100,7 @@ namespace QuasarQode.Globals
             {
                 _log = "CheckFileAge_Exceptions";
             }
-            Logging.Custom(_log + ".log", string.Format("[{0}] - {1}", Logging.szLogLevel[(int)_LogLevel], _message));
+            Logging.Custom(_log + ".log", string.Format("[{0}] - {1}", Logging.szLogLevel[(int)_LogLevel], _message), _prefix);
             return 0;
         }
 
