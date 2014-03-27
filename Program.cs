@@ -280,7 +280,7 @@ namespace QuasarQode.NagiosExtentions
 #if DEBUG
                 exceptionDebug[0] = string.Format("files.Any() = {0}", files.Any());
                 exceptionDebug[1] = string.Format("files.Count() = {0}", files.Count());
-                exceptionDebug[2] = string.Format("files.ToString() = {0}", files.ToString());
+                exceptionDebug[2] = string.Format("files.ToArray().ToString() = {0}", files.ToArray().ToString());
 #endif
                 if (!files.Any())
                 {
