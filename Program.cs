@@ -268,11 +268,20 @@ namespace QuasarQode.NagiosExtentions
                 AgeOfOldestFile = DateTime.Now;
                 return ReturnCode.NOFILES;
             }
+#if DEBUG
+            object[] exceptionDebug;
+            exceptionDebug = new object[3];
+#endif
             try
             {
                 var files = from f in dir.EnumerateFiles()
                             orderby f.CreationTime
                             select f;
+#if DEBUG
+                exceptionDebug[0] = string.Format("files.Any() = {0}", files.Any());
+                exceptionDebug[1] = string.Format("files.Count() = {0}", files.Count());
+                exceptionDebug[2] = string.Format("files.ToString() = {0}", files.ToString());
+#endif
                 if (!files.Any())
                 {
                     error = "NO FILES IN TARGET DIRECTORY.";
@@ -284,6 +293,16 @@ namespace QuasarQode.NagiosExtentions
                 {
                     AgeOfOldestFile = files.ElementAt(0).CreationTime;
                 }
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                error = "Argument out of Range exception caught in ReturnCode getOldestFile(DirectoryInfo dir, out string error, out DateTime AgeOfOldestFile).";
+                LastException = e;
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.ERROR, error);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.Message);
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.FATALEXCEPTION, LastException.ToString());
+                Globals.Globals.LogIt(Logs.Logging.iLogLevel.DEBUG, string.Format("Exception Debug info:\n{0}\n{1}\n{2}", exceptionDebug[0], exceptionDebug[1], exceptionDebug[2]));
+                return ReturnCode.UNKNOWN;
             }
             catch (Exception e)
             {
