@@ -1,6 +1,12 @@
 /* Logging.cs
  * This is my custom logging class
  * 
+ * 20-04-2015 - Keith Olenchak
+ * -Removed messageboxes, now logging exception to the debug list that is printed to stdout when verbose is >=2.
+ * 
+ * 17-04-2015 - Keith Olenchak
+ * -Only pop up messageboxes in debug builds.
+ * 
  * 06-12-2013 - Keith Olenchak
  * -Added iLogLevel enum.
  * -Added szLogLevel list to convert loglevel to a string.
@@ -19,9 +25,9 @@
 
 using System;
 using System.IO;
-using System.Windows.Forms;
 using QuasarQode.Globals;
 using System.Collections.Generic;
+using QuasarQode.NagiosExtentions;
 
 namespace QuasarQode.Logs
 {
@@ -109,15 +115,15 @@ public class Logging
 					sw.Close ();
                     sw.Dispose();
 				} catch (UnauthorizedAccessException e) {
-                    MessageBox.Show("UnauthorizedAccessException caught in QuasarQode.logs: " + e.Message, "Unauthorized Access Exception", MessageBoxButtons.OK);
+                    NagiosExtentions.CheckErrorRates.debugOutput.Add("UnauthorizedAccessException caught in QuasarQode.logs: " + e.Message);
 					RetVal = 1001;
 				} catch (IOException e) {
-                    MessageBox.Show("IOException caught in QuasarQode.logs: " + e.Message, "Generic IO Exception", MessageBoxButtons.OK);
+                    NagiosExtentions.CheckErrorRates.debugOutput.Add("IOException caught in QuasarQode.logs: " + e.Message);
 					RetVal = 1002;
 				}
                 catch (Exception e)
                 {
-                    MessageBox.Show("Generic Exception caught in QuasarQode.logs: " + e.Message, "Generic Exception", MessageBoxButtons.OK);
+                    NagiosExtentions.CheckErrorRates.debugOutput.Add("Generic Exception caught in QuasarQode.logs: " + e.Message);
                     RetVal = 1003;
                 }
 			}
