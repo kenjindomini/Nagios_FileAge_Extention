@@ -115,15 +115,15 @@ public class Logging
 					sw.Close ();
                     sw.Dispose();
 				} catch (UnauthorizedAccessException e) {
-                    NagiosExtentions.CheckErrorRates.debugOutput.Add("UnauthorizedAccessException caught in QuasarQode.logs: " + e.Message);
+                    NagiosExtentions.FileAgeCheck.debugOutput.Add("UnauthorizedAccessException caught in QuasarQode.logs: " + e.Message);
 					RetVal = 1001;
 				} catch (IOException e) {
-                    NagiosExtentions.CheckErrorRates.debugOutput.Add("IOException caught in QuasarQode.logs: " + e.Message);
+                    NagiosExtentions.FileAgeCheck.debugOutput.Add("IOException caught in QuasarQode.logs: " + e.Message);
 					RetVal = 1002;
 				}
                 catch (Exception e)
                 {
-                    NagiosExtentions.CheckErrorRates.debugOutput.Add("Generic Exception caught in QuasarQode.logs: " + e.Message);
+                    NagiosExtentions.FileAgeCheck.debugOutput.Add("Generic Exception caught in QuasarQode.logs: " + e.Message);
                     RetVal = 1003;
                 }
 			}
